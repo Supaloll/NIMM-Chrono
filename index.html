@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NIMM Chrono</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14181c">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NIMM Chrono">
+<style>
+  :root {
+    --bg: #14181c;
+    --panel: #1d2329;
+    --panel-light: #262e36;
+    --text: #f2f0e8;
+    --text-dim: #9aa3ad;
+    --accent: #ff8c3c;
+    --accent-dim: #5a3c20;
+    --go: #4caf6e;
+    --pause: #e0b13c;
+    --stop: #d9534f;
+    --border: #313a42;
+    font-size: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 0 0 40px 0;
+  }
+  header {
+    padding: 24px 20px 12px;
+    text-align: center;
+    position: relative;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+  }
+  header h1 span { color: var(--accent); }
+  .btn-settings {
+    position: absolute;
+    top: 18px;
+    right: 16px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 1.3rem;
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+  .settings-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .settings-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .settings-panel label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .settings-hint {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+  .btn-settings-save { background: var(--go); width: 100%; margin-top: 16px; }
+  .btn-settings-close { background: var(--panel-light); border: 1px solid var(--border); width: 100%; margin-top: 8px; }
+  main { max-width: 480px; margin: 0 auto; padding: 0 16px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .tour-field label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .tour-input-row { display: flex; gap: 8px; }
+  input[type="text"] {
+    flex: 1;
+    background: var(--panel-light);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1.1rem;
+    padding: 14px 14px;
+    border-radius: 12px;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .suggestion-chip {
+    background: var(--panel-light);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .suggestion-chip:active { background: var(--accent-dim); color: var(--text); }
+  .clock-display { text-align: center; padding: 28px 0 8px; }
+  .clock-time {
+    font-size: 3.2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .clock-status { margin-top: 6px; font-size: 0.95rem; color: var(--text-dim); }
+  .clock-status.running { color: var(--go); }
+  .clock-status.paused { color: var(--pause); }
+  .current-tour-name {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-top: 4px;
+    margin-bottom: 8px;
+    min-height: 1.3em;
+    line-height: 1.25;
+  }
+  .pause-time {
+    margin-top: 10px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--pause);
+    font-variant-numeric: tabular-nums;
+  }
+  .switch-field { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .switch-field label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .btn-confirm-switch { background: var(--accent); padding: 14px 18px; border-radius: 12px; white-space: nowrap; }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  button {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 14px;
+    padding: 18px 12px;
+    cursor: pointer;
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.05s ease, opacity 0.15s ease;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-start { background: var(--go); grid-column: span 2; font-size: 1.15rem; padding: 20px 12px; }
+  .btn-pause { background: var(--pause); color: #2a2410; }
+  .btn-switch { background: var(--panel-light); border: 1px solid var(--border); }
+  .btn-stop { background: var(--stop); }
+  .hidden { display: none !important; }
+  .quota-numbers { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+  .quota-done { font-size: 1.8rem; font-weight: 700; color: var(--go); }
+  .quota-numbers.over .quota-done { color: var(--stop); }
+  .quota-sep { font-size: 1.2rem; color: var(--text-dim); }
+  .quota-max { font-size: 1.2rem; color: var(--text-dim); }
+  .quota-bar-track { margin-top: 12px; height: 14px; background: var(--panel-light); border-radius: 999px; overflow: hidden; }
+  .quota-bar-fill { height: 100%; background: var(--go); border-radius: 999px; transition: width 0.3s ease, background 0.3s ease; }
+  .quota-bar-fill.over { background: var(--stop); }
+  .quota-message { margin-top: 10px; font-size: 0.9rem; color: var(--text-dim); }
+  .quota-message.over { color: var(--stop); font-weight: 600; }
+  .btn-ai-message { background: var(--panel-light); border: 1px solid var(--border); width: 100%; margin-top: 16px; }
+  .ai-message-zone { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .ai-message-status { font-size: 0.85rem; color: var(--text-dim); min-height: 1.2em; }
+  .ai-message-textarea { width: 100%; background: var(--panel-light); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 1rem; padding: 12px; border-radius: 12px; margin-top: 8px; resize: vertical; }
+  .btn-copy-message { background: var(--accent); width: 100%; margin-top: 10px; }
+  .card-title { font-size: 1rem; color: var(--text-dim); margin: 0 0 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .day-block { margin-bottom: 18px; }
+  .day-block:last-child { margin-bottom: 0; }
+  .day-header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .day-name { font-weight: 700; font-size: 1rem; }
+  .day-name .today-tag { color: var(--accent); font-size: 0.75rem; font-weight: 600; margin-left: 6px; text-transform: uppercase; }
+  .day-total { font-weight: 700; font-size: 1rem; font-variant-numeric: tabular-nums; color: var(--go); }
+  .session-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; font-size: 0.9rem; }
+  .session-time { color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .session-name { flex: 1; margin: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .session-duration { font-variant-numeric: tabular-nums; color: var(--text-dim); white-space: nowrap; }
+  .day-empty { color: var(--text-dim); font-size: 0.85rem; font-style: italic; padding: 4px 0; }
+  .history-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
+  .history-header-row .card-title { margin: 0; }
+  .btn-add-session { background: var(--panel-light); border: 1px solid var(--border); font-size: 0.8rem; padding: 8px 14px; border-radius: 10px; }
+  .session-row { gap: 4px; }
+  .session-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .session-action-btn { background: transparent; border: none; font-size: 0.95rem; padding: 4px 6px; border-radius: 8px; line-height: 1; }
+  .session-action-btn:active { background: var(--panel-light); }
+  .session-edit-form { background: var(--panel-light); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin: 8px 0; }
+  .session-edit-form .field-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .session-edit-form label { display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px; }
+  .session-edit-form input[type="text"], .session-edit-form input[type="time"], .session-edit-form input[type="date"] { width: 100%; background: var(--panel); border: 1px solid var(--border); color: var(--text); font-size: 0.95rem; padding: 10px; border-radius: 10px; outline: none; }
+  .session-edit-form .field-row > div { flex: 1; }
+  .session-edit-form .edit-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .session-edit-form .edit-actions button { flex: 1; padding: 12px; font-size: 0.9rem; }
+  .btn-edit-save { background: var(--go); }
+  .btn-edit-cancel { background: var(--panel); border: 1px solid var(--border); }
+  .btn-edit-error { color: var(--stop); font-size: 0.8rem; margin-top: 6px; }
+  footer { text-align: center; color: var(--text-dim); font-size: 0.75rem; margin-top: 30px; padding: 0 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>NIMM <span>Chrono</span></h1>
+  <button class="btn-settings" id="btnSettings" aria-label="Réglages">⚙</button>
+</header>
+<div class="settings-overlay hidden" id="settingsOverlay">
+  <div class="settings-panel">
+    <h2 class="card-title">Réglages</h2>
+    <label for="apiKeyInput">Clé API Deepseek</label>
+    <input type="text" id="apiKeyInput" placeholder="sk-..." autocomplete="off">
+    <div class="settings-hint">Stockée uniquement sur ce téléphone.</div>
+    <button class="btn-settings-save" id="btnSaveSettings">Enregistrer</button>
+    <button class="btn-settings-close" id="btnCloseSettings">Fermer</button>
+  </div>
+</div>
+<main>
+  <div class="card">
+    <div class="tour-field" id="tourInputZone">
+      <label for="tourNameInput">Nom de la tournée</label>
+      <div class="tour-input-row">
+        <input type="text" id="tourNameInput" placeholder="ex: Poste Colmar Matin" autocomplete="off">
+      </div>
+      <div class="suggestions" id="suggestionsZone"></div>
+    </div>
+    <div class="clock-display">
+      <div class="current-tour-name" id="currentTourName"></div>
+      <div class="clock-time" id="clockTime">00:00:00</div>
+      <div class="clock-status" id="clockStatus">Arrêté</div>
+      <div class="pause-time hidden" id="pauseTimeZone">Pause : <span id="pauseTime">00:00</span></div>
+    </div>
+    <div class="switch-field hidden" id="switchInputZone">
+      <label for="switchNameInput">Nouvelle tournée</label>
+      <div class="tour-input-row">
+        <input type="text" id="switchNameInput" placeholder="ex: Fret Allemagne" autocomplete="off">
+        <button class="btn-confirm-switch" id="btnConfirmSwitch">OK</button>
+      </div>
+    </div>
+    <div class="btn-grid">
+      <button class="btn-start" id="btnStart">Démarrer</button>
+      <button class="btn-pause hidden" id="btnPause">Pause</button>
+      <button class="btn-switch hidden" id="btnSwitch">Changer de tournée</button>
+      <button class="btn-stop hidden" id="btnStop" style="grid-column: span 2;">Terminer</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Cette semaine</h2>
+    <div class="quota-numbers">
+      <span class="quota-done" id="quotaDone">0h00</span>
+      <span class="quota-sep">/</span>
+      <span class="quota-max">28h</span>
+    </div>
+    <div class="quota-bar-track">
+      <div class="quota-bar-fill" id="quotaBarFill"></div>
+    </div>
+    <div class="quota-message" id="quotaMessage"></div>
+    <button class="btn-ai-message" id="btnAiMessage">Temps restant</button>
+    <div class="ai-message-zone hidden" id="aiMessageZone">
+      <div class="ai-message-status" id="aiMessageStatus"></div>
+      <textarea class="ai-message-textarea hidden" id="aiMessageTextarea" rows="3"></textarea>
+      <button class="btn-copy-message hidden" id="btnCopyMessage">Copier le message</button>
+    </div>
+  </div>
+  <div class="card" id="historyCard">
+    <div class="history-header-row">
+      <h2 class="card-title">Historique</h2>
+      <button class="btn-add-session" id="btnAddSession">+ Ajouter</button>
+    </div>
+    <div id="historyZone"></div>
+  </div>
+</main>
+<footer>NIMM Chrono — tout reste sur ton téléphone.</footer>
+<script>
+(function() {
+  "use strict";
+  const STORAGE_KEY = "nimm_chrono_sessions";
+  const TOURS_KEY = "nimm_chrono_known_tours";
+  const API_KEY_STORAGE = "nimm_chrono_deepseek_key";
+  function loadApiKey() { return localStorage.getItem(API_KEY_STORAGE) || ""; }
+  function saveApiKey(key) { localStorage.setItem(API_KEY_STORAGE, key); }
+  function loadSessions() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { return []; } }
+  function saveSessions(sessions) { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)); }
+  function deleteSession(id) {
+    const sessions = loadSessions().filter((s) => s.id !== id);
+    saveSessions(sessions);
+  }
+  function updateSession(id, newName, newStartMs, newEndMs) {
+    const sessions = loadSessions();
+    const idx = sessions.findIndex((s) => s.id === id);
+    if (idx === -1) return;
+    sessions[idx].tourName = newName;
+    sessions[idx].start = newStartMs;
+    sessions[idx].end = newEndMs;
+    sessions[idx].durationMs = newEndMs - newStartMs;
+    saveSessions(sessions);
+  }
+  function addManualSession(name, startMs, endMs) {
+    const sessions = loadSessions();
+    sessions.push({
+      id: "s_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+      tourName: name,
+      start: startMs,
+      end: endMs,
+      durationMs: endMs - startMs
+    });
+    saveSessions(sessions);
+  }
+  let editingSessionId = null;
+  function loadKnownTours() { try { return JSON.parse(localStorage.getItem(TOURS_KEY)) || []; } catch(e) { return []; } }
+  function rememberTourName(name) {
+    const tours = loadKnownTours();
+    const idx = tours.indexOf(name);
+    if (idx !== -1) tours.splice(idx, 1);
+    tours.unshift(name);
+    localStorage.setItem(TOURS_KEY, JSON.stringify(tours.slice(0, 12)));
+  }
+  const CURRENT_KEY = "nimm_chrono_current_session";
+  function loadCurrent() { try { return JSON.parse(localStorage.getItem(CURRENT_KEY)) || null; } catch(e) { return null; } }
+  function saveCurrent(session) {
+    if (session === null) localStorage.removeItem(CURRENT_KEY);
+    else localStorage.setItem(CURRENT_KEY, JSON.stringify(session));
+  }
+  let current = loadCurrent();
+  let tickInterval = null;
+  const WEEKLY_QUOTA_MS = 28 * 60 * 60 * 1000;
+  const tourInputZone = document.getElementById("tourInputZone");
+  const tourNameInput = document.getElementById("tourNameInput");
+  const suggestionsZone = document.getElementById("suggestionsZone");
+  const currentTourName = document.getElementById("currentTourName");
+  const clockTime = document.getElementById("clockTime");
+  const clockStatus = document.getElementById("clockStatus");
+  const btnStart = document.getElementById("btnStart");
+  const btnPause = document.getElementById("btnPause");
+  const btnSwitch = document.getElementById("btnSwitch");
+  const btnStop = document.getElementById("btnStop");
+  const pauseTimeZone = document.getElementById("pauseTimeZone");
+  const pauseTime = document.getElementById("pauseTime");
+  const switchInputZone = document.getElementById("switchInputZone");
+  const switchNameInput = document.getElementById("switchNameInput");
+  const btnConfirmSwitch = document.getElementById("btnConfirmSwitch");
+  const historyZone = document.getElementById("historyZone");
+  const btnAddSession = document.getElementById("btnAddSession");
+  const quotaDone = document.getElementById("quotaDone");
+  const quotaBarFill = document.getElementById("quotaBarFill");
+  const quotaMessage = document.getElementById("quotaMessage");
+  const quotaNumbers = document.querySelector(".quota-numbers");
+  const btnSettings = document.getElementById("btnSettings");
+  const settingsOverlay = document.getElementById("settingsOverlay");
+  const apiKeyInput = document.getElementById("apiKeyInput");
+  const btnSaveSettings = document.getElementById("btnSaveSettings");
+  const btnCloseSettings = document.getElementById("btnCloseSettings");
+  const btnAiMessage = document.getElementById("btnAiMessage");
+  const aiMessageZone = document.getElementById("aiMessageZone");
+  const aiMessageStatus = document.getElementById("aiMessageStatus");
+  const aiMessageTextarea = document.getElementById("aiMessageTextarea");
+  const btnCopyMessage = document.getElementById("btnCopyMessage");
+  function formatHMS(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return [h, m, sec].map(v => String(v).padStart(2, "0")).join(":");
+  }
+  function formatMS(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return [m, sec].map(v => String(v).padStart(2, "0")).join(":");
+  }
+  function elapsedMs(session) {
+    const now = Date.now();
+    let pauseTotal = session.accumulatedPauseMs || 0;
+    if (session.pausedAt) pauseTotal += now - session.pausedAt;
+    return now - session.start - pauseTotal;
+  }
+  function dateKey(timestamp) {
+    const d = new Date(timestamp);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+  function startOfDay(date) { const d = new Date(date); d.setHours(0,0,0,0); return d; }
+  function getMondayOfWeek(date) {
+    const d = startOfDay(date);
+    const dow = d.getDay();
+    const diff = (dow === 0) ? -6 : (1 - dow);
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
+  const DAY_NAMES = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+  const MONTH_NAMES = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  function formatDayLabel(date) { return DAY_NAMES[date.getDay()] + " " + date.getDate() + " " + MONTH_NAMES[date.getMonth()]; }
+  function formatClockHM(timestamp) { const d = new Date(timestamp); return String(d.getHours()).padStart(2,"0") + "h" + String(d.getMinutes()).padStart(2,"0"); }
+  function formatDurationLabel(ms) {
+    const totalMin = Math.round(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h === 0) return m + "min";
+    if (m === 0) return h + "h";
+    return h + "h" + String(m).padStart(2, "0");
+  }
+  function timestampToDateInput(ts) {
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+  function timestampToTimeInput(ts) {
+    const d = new Date(ts);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  function dateAndTimeInputToTimestamp(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return null;
+    const d = new Date(dateStr + "T" + timeStr + ":00");
+    if (isNaN(d.getTime())) return null;
+    return d.getTime();
+  }
+  function buildEditForm(session) {
+    const isNew = !session;
+    const form = document.createElement("div");
+    form.className = "session-edit-form";
+
+    const nameLabel = document.createElement("label");
+    nameLabel.textContent = "Nom de la tournée";
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = isNew ? "" : session.tourName;
+    nameInput.placeholder = "ex: Fret Allemagne";
+
+    const row = document.createElement("div");
+    row.className = "field-row";
+
+    const startWrap = document.createElement("div");
+    const startDateLabel = document.createElement("label");
+    startDateLabel.textContent = "Début";
+    const startDateInput = document.createElement("input");
+    startDateInput.type = "date";
+    const startTimeInput = document.createElement("input");
+    startTimeInput.type = "time";
+    startTimeInput.style.marginTop = "6px";
+
+    const endWrap = document.createElement("div");
+    const endDateLabel = document.createElement("label");
+    endDateLabel.textContent = "Fin";
+    const endDateInput = document.createElement("input");
+    endDateInput.type = "date";
+    const endTimeInput = document.createElement("input");
+    endTimeInput.type = "time";
+    endTimeInput.style.marginTop = "6px";
+
+    if (!isNew) {
+      startDateInput.value = timestampToDateInput(session.start);
+      startTimeInput.value = timestampToTimeInput(session.start);
+      endDateInput.value = timestampToDateInput(session.end);
+      endTimeInput.value = timestampToTimeInput(session.end);
+    } else {
+      const todayStr = timestampToDateInput(Date.now());
+      startDateInput.value = todayStr;
+      endDateInput.value = todayStr;
+    }
+
+    startWrap.appendChild(startDateLabel);
+    startWrap.appendChild(startDateInput);
+    startWrap.appendChild(startTimeInput);
+    endWrap.appendChild(endDateLabel);
+    endWrap.appendChild(endDateInput);
+    endWrap.appendChild(endTimeInput);
+    row.appendChild(startWrap);
+    row.appendChild(endWrap);
+
+    const errorEl = document.createElement("div");
+    errorEl.className = "btn-edit-error hidden";
+
+    const actions = document.createElement("div");
+    actions.className = "edit-actions";
+
+    const btnSave = document.createElement("button");
+    btnSave.className = "btn-edit-save";
+    btnSave.textContent = "Valider";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.className = "btn-edit-cancel";
+    btnCancel.textContent = "Annuler";
+
+    btnCancel.addEventListener("click", () => {
+      editingSessionId = null;
+      renderHistory();
+      renderQuota();
+    });
+
+    btnSave.addEventListener("click", () => {
+      const cleanName = nameInput.value.trim();
+      const startMs = dateAndTimeInputToTimestamp(startDateInput.value, startTimeInput.value);
+      const endMs = dateAndTimeInputToTimestamp(endDateInput.value, endTimeInput.value);
+
+      if (!cleanName) {
+        errorEl.textContent = "Le nom de la tournée est obligatoire.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      if (startMs === null || endMs === null) {
+        errorEl.textContent = "Merci de renseigner une date et une heure valides.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      if (endMs <= startMs) {
+        errorEl.textContent = "L'heure de fin doit être après l'heure de début.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      if (isNew) {
+        addManualSession(cleanName, startMs, endMs);
+      } else {
+        updateSession(session.id, cleanName, startMs, endMs);
+      }
+
+      editingSessionId = null;
+      renderHistory();
+      renderQuota();
+    });
+
+    actions.appendChild(btnSave);
+    actions.appendChild(btnCancel);
+
+    form.appendChild(nameLabel);
+    form.appendChild(nameInput);
+    form.appendChild(row);
+    form.appendChild(errorEl);
+    form.appendChild(actions);
+
+    return form;
+  }
+  function renderHistory() {
+    const sessions = loadSessions();
+    const today = new Date();
+    const monday = getMondayOfWeek(today);
+    const byDay = {};
+    sessions.forEach(s => {
+      const key = dateKey(s.start);
+      if (!byDay[key]) byDay[key] = [];
+      byDay[key].push(s);
+    });
+    const todayKey = dateKey(today.getTime());
+    historyZone.innerHTML = "";
+    if (editingSessionId === "new") {
+      historyZone.appendChild(buildEditForm(null));
+    }
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      if (d.getTime() > startOfDay(today).getTime()) continue;
+      const key = dateKey(d.getTime());
+      const daySessions = (byDay[key] || []).slice().sort((a,b) => a.start - b.start);
+      const isToday = key === todayKey;
+      if (daySessions.length === 0 && !isToday) continue;
+      const dayTotalMs = daySessions.reduce((sum, s) => sum + s.durationMs, 0);
+      const dayBlock = document.createElement("div");
+      dayBlock.className = "day-block";
+      const header = document.createElement("div");
+      header.className = "day-header";
+      const nameEl = document.createElement("div");
+      nameEl.className = "day-name";
+      nameEl.textContent = formatDayLabel(d);
+      if (isToday) { const tag = document.createElement("span"); tag.className = "today-tag"; tag.textContent = "Aujourd'hui"; nameEl.appendChild(tag); }
+      const totalEl = document.createElement("div");
+      totalEl.className = "day-total";
+      totalEl.textContent = formatDurationLabel(dayTotalMs);
+      header.appendChild(nameEl);
+      header.appendChild(totalEl);
+      dayBlock.appendChild(header);
+      if (daySessions.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "day-empty";
+        empty.textContent = "Rien pour l'instant";
+        dayBlock.appendChild(empty);
+      } else {
+        daySessions.forEach(s => {
+          if (editingSessionId === s.id) {
+            dayBlock.appendChild(buildEditForm(s));
+            return;
+          }
+          const row = document.createElement("div");
+          row.className = "session-row";
+          const timeEl = document.createElement("div");
+          timeEl.className = "session-time";
+          timeEl.textContent = formatClockHM(s.start) + " → " + formatClockHM(s.end);
+          const nameEl2 = document.createElement("div");
+          nameEl2.className = "session-name";
+          nameEl2.textContent = s.tourName;
+          const durEl = document.createElement("div");
+          durEl.className = "session-duration";
+          durEl.textContent = formatDurationLabel(s.durationMs);
+          const actionsEl = document.createElement("div");
+          actionsEl.className = "session-actions";
+          const btnEdit = document.createElement("button");
+          btnEdit.className = "session-action-btn";
+          btnEdit.textContent = "✏️";
+          btnEdit.addEventListener("click", () => {
+            editingSessionId = s.id;
+            renderHistory();
+          });
+          const btnDelete = document.createElement("button");
+          btnDelete.className = "session-action-btn";
+          btnDelete.textContent = "🗑️";
+          btnDelete.addEventListener("click", () => {
+            if (confirm("Supprimer cette session (" + s.tourName + ", " + formatDurationLabel(s.durationMs) + ") ?")) {
+              deleteSession(s.id);
+              renderHistory();
+              renderQuota();
+            }
+          });
+          actionsEl.appendChild(btnEdit);
+          actionsEl.appendChild(btnDelete);
+          row.appendChild(timeEl);
+          row.appendChild(nameEl2);
+          row.appendChild(durEl);
+          row.appendChild(actionsEl);
+          dayBlock.appendChild(row);
+        });
+      }
+      historyZone.appendChild(dayBlock);
+    }
+  }
+  function getWeekTotalMs() {
+    const sessions = loadSessions();
+    const today = new Date();
+    const monday = getMondayOfWeek(today);
+    const mondayMs = monday.getTime();
+    let total = sessions.filter(s => s.start >= mondayMs).reduce((sum, s) => sum + s.durationMs, 0);
+    if (current && current.start >= mondayMs) total += elapsedMs(current);
+    return total;
+  }
+  function renderQuota() {
+    const totalMs = getWeekTotalMs();
+    const overMs = totalMs - WEEKLY_QUOTA_MS;
+    const isOver = overMs > 0;
+    quotaDone.textContent = formatDurationLabel(Math.max(0, totalMs));
+    const pct = Math.min(100, (totalMs / WEEKLY_QUOTA_MS) * 100);
+    quotaBarFill.style.width = pct + "%";
+    if (isOver) {
+      quotaNumbers.classList.add("over");
+      quotaBarFill.classList.add("over");
+      quotaMessage.classList.add("over");
+      quotaMessage.textContent = "Dépassement de " + formatDurationLabel(overMs) + " sur la semaine";
+    } else {
+      quotaNumbers.classList.remove("over");
+      quotaBarFill.classList.remove("over");
+      quotaMessage.classList.remove("over");
+      quotaMessage.textContent = "Reste " + formatDurationLabel(WEEKLY_QUOTA_MS - totalMs) + " cette semaine";
+    }
+  }
+  function openSettings() { apiKeyInput.value = loadApiKey(); settingsOverlay.classList.remove("hidden"); }
+  function closeSettings() { settingsOverlay.classList.add("hidden"); }
+  function handleSaveSettings() { saveApiKey(apiKeyInput.value.trim()); closeSettings(); }
+  function buildWeekSummaryForAi() {
+    const totalMs = getWeekTotalMs();
+    const overMs = totalMs - WEEKLY_QUOTA_MS;
+    const isOver = overMs > 0;
+    return { totalLabel: formatDurationLabel(Math.max(0, totalMs)), isOver, diffLabel: isOver ? formatDurationLabel(overMs) : formatDurationLabel(WEEKLY_QUOTA_MS - totalMs) };
+  }
+  async function handleAiMessage() {
+    const apiKey = loadApiKey();
+    aiMessageZone.classList.remove("hidden");
+    aiMessageTextarea.classList.add("hidden");
+    btnCopyMessage.classList.add("hidden");
+    if (!apiKey) { aiMessageStatus.textContent = "Aucune clé API enregistrée. Va dans les réglages (⚙) pour l'ajouter."; return; }
+    const summary = buildWeekSummaryForAi();
+    aiMessageStatus.textContent = "Génération du message...";
+    const contextPrompt = "Tu rédiges un SMS court (1 à 2 phrases maximum) de la part de Laurent, chauffeur poids lourd en temps partiel thérapeutique suite à une opération, qui doit envoyer à Amandine (assistante administrative, qui aime les emojis) le décompte de ses heures de la semaine par rapport à son quota de 28h/semaine. Théo, le patron, est déjà au courant et ne pose pas de problème sur les dépassements. Laurent veut un message diplomate mais clair, qui garde de bonnes relations avec Amandine. Si Laurent dépasse son quota, utilise un ou plusieurs emojis parmi ⚡⚠️🚨 pour marquer le dépassement, proportionnellement à son importance. Si Laurent est encore dans son quota, reste neutre et léger, sans ces emojis. Le SMS commencera toujours par \"Ok, \" ajouté automatiquement avant ta réponse : ne l'écris donc jamais toi-même, et rédige directement la suite de la phrase en commençant par une minuscule. Réponds uniquement avec le texte du SMS, sans guillemets, sans explication.";
+    const factsPrompt = summary.isOver ? "Cette semaine, Laurent a déjà dépassé son quota de 28h de " + summary.diffLabel + " (total travaillé : " + summary.totalLabel + ")." : "Cette semaine, Laurent a encore " + summary.diffLabel + " avant d'atteindre son quota de 28h (total travaillé : " + summary.totalLabel + ").";
+    try {
+      const response = await fetch("https://api.deepseek.com/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+        body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "system", content: contextPrompt }, { role: "user", content: factsPrompt }], max_tokens: 120 })
+      });
+      if (!response.ok) throw new Error("Réponse API invalide (" + response.status + ")");
+      const data = await response.json();
+      const text = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content.trim() : "";
+      if (!text) throw new Error("Réponse vide");
+      aiMessageStatus.textContent = "Message prêt — tu peux le modifier avant de l'envoyer :";
+      aiMessageTextarea.value = "Ok, " + text;
+      aiMessageTextarea.classList.remove("hidden");
+      btnCopyMessage.classList.remove("hidden");
+    } catch(err) { aiMessageStatus.textContent = "Erreur lors de la génération. Vérifie ta connexion ou ta clé API."; }
+  }
+  function handleCopyMessage() {
+    aiMessageTextarea.select();
+    aiMessageTextarea.setSelectionRange(0, 99999);
+    try { navigator.clipboard.writeText(aiMessageTextarea.value); aiMessageStatus.textContent = "Copié ! Colle-le dans ton SMS à Amandine."; }
+    catch(e) { document.execCommand("copy"); aiMessageStatus.textContent = "Copié ! Colle-le dans ton SMS à Amandine."; }
+  }
+  function renderSuggestions() {
+    const tours = loadKnownTours();
+    suggestionsZone.innerHTML = "";
+    tours.forEach(name => {
+      const chip = document.createElement("div");
+      chip.className = "suggestion-chip";
+      chip.textContent = name;
+      chip.addEventListener("click", () => { tourNameInput.value = name; });
+      suggestionsZone.appendChild(chip);
+    });
+  }
+  function render() {
+    if (!current) {
+      tourInputZone.classList.remove("hidden");
+      currentTourName.textContent = "";
+      clockTime.textContent = "00:00:00";
+      clockStatus.textContent = "Arrêté";
+      clockStatus.className = "clock-status";
+      btnStart.classList.remove("hidden");
+      btnPause.classList.add("hidden");
+      btnSwitch.classList.add("hidden");
+      btnStop.classList.add("hidden");
+    } else {
+      tourInputZone.classList.add("hidden");
+      currentTourName.textContent = current.tourName;
+      clockTime.textContent = formatHMS(elapsedMs(current) / 1000);
+      if (current.pausedAt) {
+        clockStatus.textContent = "En pause";
+        clockStatus.className = "clock-status paused";
+        btnPause.textContent = "Reprendre";
+        pauseTimeZone.classList.remove("hidden");
+        pauseTime.textContent = formatMS((Date.now() - current.pausedAt) / 1000);
+      } else {
+        clockStatus.textContent = "En cours";
+        clockStatus.className = "clock-status running";
+        btnPause.textContent = "Pause";
+        pauseTimeZone.classList.add("hidden");
+      }
+      btnStart.classList.add("hidden");
+      btnPause.classList.remove("hidden");
+      btnSwitch.classList.remove("hidden");
+      btnStop.classList.remove("hidden");
+    }
+  }
+  function startTicking() {
+    if (tickInterval) clearInterval(tickInterval);
+    tickInterval = setInterval(() => {
+      if (current && !current.pausedAt) { clockTime.textContent = formatHMS(elapsedMs(current) / 1000); renderQuota(); }
+      if (current && current.pausedAt) { pauseTime.textContent = formatMS((Date.now() - current.pausedAt) / 1000); }
+    }, 1000);
+  }
+  function finalizeCurrentSession() {
+    const sessions = loadSessions();
+    const endTime = Date.now();
+    const totalMs = elapsedMs(current);
+    sessions.push({ id: current.id, tourName: current.tourName, start: current.start, end: endTime, durationMs: totalMs });
+    saveSessions(sessions);
+    return endTime;
+  }
+  function handleStart() {
+    const name = tourNameInput.value.trim();
+    if (!name) { tourNameInput.focus(); return; }
+    rememberTourName(name);
+    current = { id: "s_" + Date.now(), tourName: name, start: Date.now(), pausedAt: null, accumulatedPauseMs: 0 };
+    saveCurrent(current);
+    tourNameInput.value = "";
+    render();
+    renderHistory();
+    renderQuota();
+  }
+  function handlePauseToggle() {
+    if (!current) return;
+    if (current.pausedAt) { current.accumulatedPauseMs = (current.accumulatedPauseMs || 0) + (Date.now() - current.pausedAt); current.pausedAt = null; }
+    else { current.pausedAt = Date.now(); }
+    saveCurrent(current);
+    render();
+  }
+  function handleSwitch() { if (!current) return; switchInputZone.classList.remove("hidden"); switchNameInput.value = ""; switchNameInput.focus(); }
+  function confirmSwitch() {
+    if (!current) return;
+    const cleanName = switchNameInput.value.trim();
+    if (!cleanName) { switchNameInput.focus(); return; }
+    if (current.pausedAt) { current.accumulatedPauseMs = (current.accumulatedPauseMs || 0) + (Date.now() - current.pausedAt); current.pausedAt = null; }
+    finalizeCurrentSession();
+    rememberTourName(cleanName);
+    current = { id: "s_" + Date.now(), tourName: cleanName, start: Date.now(), pausedAt: null, accumulatedPauseMs: 0 };
+    saveCurrent(current);
+    switchInputZone.classList.add("hidden");
+    render();
+    renderHistory();
+    renderQuota();
+  }
+  function handleStop() {
+    if (!current) return;
+    if (current.pausedAt) { current.accumulatedPauseMs = (current.accumulatedPauseMs || 0) + (Date.now() - current.pausedAt); current.pausedAt = null; }
+    finalizeCurrentSession();
+    current = null;
+    saveCurrent(null);
+    render();
+    renderHistory();
+    renderQuota();
+  }
+  btnStart.addEventListener("click", handleStart);
+  btnPause.addEventListener("click", handlePauseToggle);
+  btnSwitch.addEventListener("click", handleSwitch);
+  btnStop.addEventListener("click", handleStop);
+  btnConfirmSwitch.addEventListener("click", confirmSwitch);
+  tourNameInput.addEventListener("keydown", e => { if (e.key === "Enter") handleStart(); });
+  switchNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmSwitch(); });
+  btnSettings.addEventListener("click", openSettings);
+  btnCloseSettings.addEventListener("click", closeSettings);
+  btnSaveSettings.addEventListener("click", handleSaveSettings);
+  btnAiMessage.addEventListener("click", handleAiMessage);
+  btnCopyMessage.addEventListener("click", handleCopyMessage);
+  btnAddSession.addEventListener("click", () => {
+    editingSessionId = "new";
+    renderHistory();
+  });
+  renderSuggestions();
+  render();
+  renderHistory();
+  renderQuota();
+  startTicking();
+})();
+</script>
+<script>
+  // Active le mode hors-ligne (PWA) : ce bloc est indépendant du reste de l'application.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {
+        // Si l'enregistrement échoue (ex: ouverture en local sans https),
+        // l'application continue de fonctionner normalement, juste sans mode hors-ligne.
+      });
+    });
+  }
+</script>
+</body>
+</html>
+
