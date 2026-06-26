@@ -1,0 +1,42 @@
+# Règles permanentes pour NIMM Chrono
+
+## Contexte du projet
+- NIMM Chrono est une page web unique (HTML + CSS + JS dans un seul fichier index.html, ou éventuellement séparé en index.html / styles.css / app.js selon les blocs fournis)
+- Pas de base de données — tout est stocké via localStorage dans le navigateur
+- Pas de Python, pas de backend, pas de serveur
+- Le seul appel réseau externe est vers l'API Deepseek (pour générer le message SMS)
+
+## Comportement général
+- Toujours choisir "proceed" quand une commande est en cours — ne pas attendre confirmation
+- Ne jamais interrompre l'exécution d'un script en cours
+
+## Environnement
+- OS : Windows 11
+- Utiliser les commandes Windows : `del` pas `rm`, `copy` pas `cp`, `move` pas `mv`
+- Terminal : PowerShell ou CMD — jamais de commandes Unix/Linux
+- PowerShell : jamais enchaîner des commandes avec `&&` — chaque commande sur sa propre ligne
+- Jamais utiliser `grep` — utiliser `findstr` à la place
+- Jamais utiliser `cat` — utiliser `type` à la place
+- Jamais utiliser `which` — utiliser `where` à la place
+
+## Encodage — tous fichiers
+- INTERDICTION ABSOLUE : ne jamais lire ou réécrire un fichier avec un repli automatique d'encodage (latin-1, cp1252) en cas d'erreur UTF-8
+- Si une erreur d'encodage survient : s'arrêter et afficher l'erreur exacte à Laurent, ne jamais corriger seul en changeant d'encodage
+- Avant tout remplacement sur un fichier contenant des accents ou emojis : vérifier qu'ils s'affichent correctement dans la lecture du fichier
+- Après CHAQUE remplacement (replace_in_file) sur index.html, sans exception même pour un changement qui semble purement visuel (CSS, taille de police, couleur) :
+  1. Relire immédiatement le fichier modifié avec l'outil de lecture
+  2. Chercher spécifiquement la présence de séquences suspectes du type "Ã©", "Ã¨", "Ã ", "â€”", "â€™", ou tout autre motif commençant par "Ã" ou "â€" suivi d'un caractère bizarre
+  3. Si une telle séquence apparaît alors qu'elle n'était pas dans le FIND/REPLACE demandé : s'arrêter immédiatement, ne pas continuer sur d'autres blocs, et signaler le problème exact à Laurent avant de poursuivre
+  4. Ne jamais supposer qu'un changement "juste CSS" ou "juste visuel" est sans risque pour l'encodage — toute sauvegarde de fichier peut altérer l'encodage des accents ailleurs dans le fichier, même loin du bloc modifié
+
+## Modifications de fichiers
+- Toujours lire le fichier avant de le modifier — jamais modifier de mémoire
+- Toujours tenter `replace_in_file` en premier sur un fichier existant
+- JAMAIS utiliser `write_to_file` sur un fichier existant — risque de perte de contenu
+- Blocs FIND courts : cibler 5 à 15 lignes maximum
+- Si le FIND doit être long : découper en plusieurs blocs successifs plus petits
+
+## Quand Laurent doit intervenir
+- Si Cline boucle plus de 2 fois sur la même action sans progrès : Laurent interrompt
+- Si Cline écrit "non trouvé" deux fois de suite : Laurent interrompt et signale le problème
+- En dehors de ça : laisser Cline finir sans interrompre
