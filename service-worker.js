@@ -2,7 +2,8 @@
 // Permet à l'application de fonctionner même sans connexion internet,
 // une fois que la page a été visitée au moins une fois.
 
-const CACHE_NAME = "nimm-chrono-cache-v1";
+const CACHE_VERSION = "2026-06-26";
+const CACHE_NAME = "nimm-chrono-cache-" + CACHE_VERSION;
 const FILES_TO_CACHE = [
   "./index.html",
   "./manifest.json",
@@ -36,9 +37,13 @@ self.addEventListener("activate", (event) => {
 // Récupération des fichiers : on sert depuis le cache si possible,
 // sinon on va chercher sur le réseau (et on met à jour le cache).
 self.addEventListener("fetch", (event) => {
-  // On ne met jamais en cache les appels vers l'API Deepseek :
+  // On ne met jamais en cache les appels vers les API des LLM (Deepseek, Claude, Gemini) :
   // ce sont des appels dynamiques qui doivent toujours passer par le réseau.
-  if (event.request.url.includes("api.deepseek.com")) {
+  if (
+    event.request.url.includes("api.deepseek.com") ||
+    event.request.url.includes("api.anthropic.com") ||
+    event.request.url.includes("generativelanguage.googleapis.com")
+  ) {
     return;
   }
 

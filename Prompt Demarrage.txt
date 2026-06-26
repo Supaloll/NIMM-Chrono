@@ -1,0 +1,59 @@
+Bonjour Claude.
+Je suis Laurent, créateur du projet NIMM Chrono.
+
+CONTEXTE :
+Tu as accès aux fichiers du projet dans "Project files" :
+- ARCHITECTURE.md (état réel du code — à lire en priorité)
+- index.html (fichier unique : HTML + CSS + JS)
+- service-worker.js
+- manifest.json
+- .clinerules
+
+CONVENTIONS DE CODE :
+- JS vanilla, camelCase pour les variables/fonctions, kebab-case pour les classes CSS
+- Indentation : celle du fichier existant
+- En cas de doute, suis le code autour
+
+RÈGLES D'ARCHITECTURE (critiques) :
+1. Un seul fichier index.html — pas de framework, pas de build, pas de dépendance externe (sauf l'API du LLM choisi)
+2. Tout le stockage actif passe par localStorage — aucune base de données, aucun backend. L'export/import JSON ne fait que lire/écrire ce localStorage à la demande de l'utilisateur ; ce n'est pas un second système de stockage
+3. Les sessions de travail (sessions/current) et les historiques de l'Assistant (par contact) sont des clés localStorage séparées et indépendantes — ne jamais les mélanger
+4. Le calcul du quota hebdomadaire (getWeekTotalMs) est la seule source de vérité pour les heures — jamais recalculé ailleurs ni estimé par le LLM
+5. Le service worker ne doit jamais mettre en cache les appels vers les API de LLM (Deepseek/Claude/Gemini selon le provider actif) — uniquement les fichiers statiques de l'appli
+
+WORKFLOW :
+⚠️ DEUX PHASES DE COMMUNICATION :
+
+PHASE 1 — DISCUSSION (avec Laurent) :
+- Langage naturel, questions, validation
+- Tu me parles à MOI (2e personne)
+- Pas de code, pas de FIND/REPLACE
+- On explore, on valide l'approche ensemble
+
+PHASE 2 — PRODUCTION (pour Cline) :
+- Quand je dis "On passe au code" ou que tu estimes avoir assez d'infos, tu PASSES EN MODE CLINE
+- Tu t'adresses DIRECTEMENT à Cline (2e personne)
+- Pas de "dis à Cline" — parle-lui directement
+- Tu marques le début par : --- DÉBUT POUR CLINE ---
+- Tu marques la fin par : --- FIN POUR CLINE ---
+- Entre ces deux marqueurs, TOUT est destiné à Cline
+- Je copie-colle intégralement, je ne nettoie rien
+
+FORMAT STRICT DES BLOCS (Phase 2) :
+⚠️ ## Bloc #XX
+➡️ fichier cible : [filename]
+**FIND**
+[texte exact]
+**REPLACE**
+[remplacement]
+
+RÈGLES COMPLÉMENTAIRES :
+- UN bloc à la fois, confirmation entre chaque
+- Après chaque bloc, je t'envoie le retour de Cline (succès + vérification encodage)
+- Les blocs doivent être livrés dans l'ordre des dépendances
+- Encodage : après chaque bloc, vérification obligatoire qu'aucune séquence corrompue (Ã©, â€™, etc.) n'apparaît
+- Cache-busting : en fin de session (juste avant que je fasse mon commit/push), mettre à jour CACHE_VERSION dans service-worker.js. Utiliser la date du jour au format AAAA-MM-JJ. Si plusieurs sessions le même jour : 2026-06-26-1, 2026-06-26-2, etc. Incrémenter même sans changement visible pour l'utilisateur.
+
+AUJOURD'HUI : 
+---
+Commence par me confirmer que tu as bien lu ARCHITECTURE.md et les fichiers utiles pour la session, puis on discute de ce que je veux implémenter/modifier.
